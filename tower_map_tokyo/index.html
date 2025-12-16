@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Delivery Map Pro</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/turf/turf.min.js"></script>
+
+    <style>
+        body { margin: 0; padding: 0; }
+        #map { height: 100vh; width: 100%; }
+        /* 現在地確認ボタンのデザイン */
+        #check-btn {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            padding: 15px 30px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 30px;
+            font-size: 16px;
+            font-weight: bold;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            cursor: pointer;
+        }
+        #check-btn:active { background-color: #0056b3; }
+        /* 情報ポップアップのスタイル */
+        .info-card { font-size: 14px; }
+        .alert-area { color: red; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div id="map"></div>
+    <button id="check-btn" onclick="checkCurrentLocation()">現在地</button>
+
+    <script>
+        // 1. 地図の初期化 (初期位置は東京周辺に仮設定)
+        const map = L.map('map').setView([35.6895, 139.6917], 13);
+
+        // OpenStreetMapを表示 (Googleマップ風の無料地図)
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        let geoJsonLayer;
+        let mapData = null;
+
+        // 2. 作成したGeoJSONデータを読み込む
+        fetch('data/mymap.geojson')
+            .then(response => response.json())
+            .then(data => {
+                mapData = data;
+                // 地図上にデータを表示
+                geoJsonLayer = L.geoJSON(data, {
+                    // 線やエリアの色設定
+                    style: function (feature) {
+                        return {
+                            color: feature.properties.marker_color || '#3388ff', // データの色を使う
+                            weight: 5,
+                            opacity: 0.65
+                        };
+                    },
+                    // ピン（点）の表示設定
+                    pointToLayer: function (feature, latlng) {
+                        // 通常のマーカーではなく、色付きの円として描画
+                        return L.circleMarker(latlng, {
+                            radius: 8,
+                            fillColor: feature.properties.marker_color || "#007bff", // ピンの色
+                            color: "#fff", // 縁取りの色
+                            weight: 1,
+                            opacity: 1,
+                            fillOpacity: 0.8
+                        });
+                    },
+                    onEachFeature: function (feature, layer) {
+                        if (feature.properties && feature.properties.name) {
+                            layer.bindPopup(`<b>${feature.properties.name}</b><br>${feature.properties.description || ''}`);
+                        }
+                    }
+                }).addTo(map);
+                
+                // データがある範囲にズーム
+                // map.fitBounds(geoJsonLayer.getBounds());
+            })
+            .catch(err => console.error("データ読み込みエラー:", err));
+
+        // 3. 「ここは何？」ボタンのロジック
+        function checkCurrentLocation() {
+            if (!navigator.geolocation) {
+                alert("GPSが使えません");
+                return;
+            }
+
+            navigator.geolocation.getCurrentPosition(position => {
+                const lat = position.coords.latitude;
+                const lng = position.coords.longitude;
+                const currentPoint = turf.point([lng, lat]); // Turf形式の現在地
+
+                // 現在地にズーム
+                map.setView([lat, lng], 18);
+                
+                // A. 自分自身のマーカーを表示
+                L.marker([lat, lng]).addTo(map).bindPopup("現在地").openPopup();
+
+                if (!mapData) return;
+
+                let messages = [];
+
+                // B. データ判定 (Turf.jsを使用)
+                L.geoJSON(mapData).eachLayer(layer => {
+                    const feature = layer.feature;
+                    
+                    // --- 1. エリア（ポリゴン）判定 ---
+                    // 商店街のエリア内か？など
+                    if (feature.geometry.type === "Polygon") {
+                        if (turf.booleanPointInPolygon(currentPoint, feature)) {
+                            messages.push(`【エリア内】${feature.properties.name || '名称不明エリア'}`);
+                            // ここに「時間帯判定」のロジックを追加できます
+                        }
+                    }
+
+                    // --- 2. ピン（ポイント）判定 ---
+                    // 半径50m以内にピンがあるか？
+                    if (feature.geometry.type === "Point") {
+                        const dist = turf.distance(currentPoint, feature, {units: 'meters'});
+                        if (dist < 50) { // 50m以内
+                            messages.push(`【近くの建物】${feature.properties.name} (約${Math.round(dist)}m)`);
+                        }
+                    }
+                    
+                    // --- 3. 線（道路）判定 ---
+                    // 近くに登録された道路があるか？
+                     if (feature.geometry.type === "LineString") {
+                        const line = turf.lineString(feature.geometry.coordinates);
+                        const dist = turf.pointToLineDistance(currentPoint, line, {units: 'meters'});
+                        if (dist < 10) { // 10m以内
+                             messages.push(`【道路情報】${feature.properties.name || '登録ルート'} 付近`);
+                        }
+                    }
+                });
+
+                if (messages.length > 0) {
+                    alert("検出情報:\n" + messages.join("\n"));
+                } else {
+                    alert("半径50m以内に登録情報はありません。");
+                }
+
+            }, error => {
+                alert("位置情報が取得できませんでした: " + error.message);
+            });
+        }
+    </script>
+</body>
+</html>
