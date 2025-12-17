@@ -30,5 +30,11 @@
         <a href="./bike_cost_calc/index.html">ツールを開く &rarr;</a>
     </div>
 
+    <div class="tool-card">
+        <h2>🏍️ バイク加速シュミレーター</h2>
+        <p>アクセサリー装備や積載の負荷、ウェイトローラーの調整カスタムなどを計算し、加速をグラフ化します。</p>
+        <a href="./bike_acceleration_simulator/index.html">ツールを開く &rarr;</a>
+    </div>
+
     </body>
 </html>

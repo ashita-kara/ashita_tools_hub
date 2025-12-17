@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>バイク加速シミュレーター</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif; 
+            margin: 0; padding: 15px; background-color: #f0f2f5; color: #1a1a1a; padding-bottom: 60px; 
+        }
+        h2 { font-size: 1.2rem; margin: 0 0 15px 0; padding-bottom: 10px; border-bottom: 2px solid #0056b3; color: #0056b3; }
+        
+        .control-panel { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
+        .control-group { background: #fff; padding: 15px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        
+        /* グループ色分け */
+        .group-bike { border-left: 6px solid #2196F3; }
+        .group-tune { border-left: 6px solid #9C27B0; }
+        .group-weight { border-left: 6px solid #FF9800; }
+        .group-cond { border-left: 6px solid #4CAF50; }
+
+        label { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-weight: 700; font-size: 0.9rem; color: #444; }
+        select { width: 100%; padding: 12px; font-size: 1rem; border: 1px solid #ddd; border-radius: 8px; background-color: #f9f9f9; }
+        input[type="range"] { width: 100%; height: 25px; margin: 5px 0; cursor: pointer; accent-color: #0056b3; }
+        input[type="checkbox"] { transform: scale(1.5); accent-color: #9C27B0; }
+
+        .val-display { font-size: 1.1em; color: #0056b3; }
+        .unit { font-size: 0.85em; color: #666; font-weight: normal; }
+
+        /* 結果パネル */
+        #results-area { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+        
+        /* 結果の行設定 */
+        .result-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        
+        .res-box { background: #fff; padding: 12px 5px; border-radius: 10px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border: 1px solid #eee; }
+        .res-label { font-size: 0.75rem; color: #666; display: block; margin-bottom: 3px; }
+        .res-val { font-size: 1.3rem; font-weight: 800; color: #333; }
+        .res-unit { font-size: 0.8rem; font-weight: normal; }
+        
+        /* 距離計測用は少し色を変える */
+        .res-dist .res-val { color: #d84315; } 
+
+        /* グラフエリア */
+        .chart-container { 
+            position: relative; width: 100%; height: 40vh; min-height: 300px; 
+            background: #fff; border-radius: 12px; padding: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        .toggle-row { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; }
+        .tune-desc { font-size: 0.8rem; color: #666; margin-top: -5px; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+
+<h2>🛵 加速シミュレーター</h2>
+
+<div id="results-area">
+    <div class="result-row">
+        <div class="res-box">
+            <span class="res-label">0-30km/h 到達</span>
+            <span id="time30" class="res-val">-</span> <span class="res-unit">秒</span>
+        </div>
+        <div class="res-box">
+            <span class="res-label">0-60km/h 到達</span>
+            <span id="time60" class="res-val">-</span> <span class="res-unit">秒</span>
+        </div>
+    </div>
+
+    <div class="result-row">
+        <div class="res-box res-dist">
+            <span class="res-label">🚩 0-500m 通過</span>
+            <span id="time500m" class="res-val">-</span> <span class="res-unit">秒</span>
+        </div>
+        <div class="res-box res-dist">
+            <span class="res-label">🏁 0-1km 通過</span>
+            <span id="time1km" class="res-val">-</span> <span class="res-unit">秒</span>
+        </div>
+    </div>
+</div>
+
+<div class="chart-container">
+    <canvas id="accelChart"></canvas>
+</div>
+<p style="text-align:center; font-size:0.8rem; color:#888;">グラフ: 横軸=秒数 / 縦軸=速度km/h</p>
+
+<div class="control-panel">
+    
+    <div class="control-group group-bike">
+        <label>車種プリセット</label>
+        <select id="bikePreset">
+            <option value="">-- カスタム (手動) --</option>
+            <optgroup label="HONDA">
+                <option value='{"w":132, "p":12.5}'>PCX125</option>
+                <option value='{"w":132, "p":15.8}'>PCX160</option>
+                <option value='{"w":136, "p":16.0}'>ADV160</option>
+                <option value='{"w":116, "p":11.0}'>リード125</option>
+                <option value='{"w":96, "p":8.7}'>Dio110</option>
+                <option value='{"w":110, "p":7.9}'>ベンリィ110</option>
+                <option value='{"w":139, "p":4.6}'>ジャイロキャノピー (50cc)</option>
+                <option value='{"w":113, "p":4.6}'>ジャイロX (50cc)</option>
+                <option value='{"w":110, "p":9.8}'>スーパーカブ C125</option>
+                <option value='{"w":118, "p":9.1}'>CT125 ハンターカブ</option>
+                <option value='{"w":162, "p":14.5}'>FORZA 125</option>
+                <option value='{"w":79, "p":4.5}'>タクト/ダンク (50cc)</option>
+                <option value='{"w":87, "p":4.2}'>ズーマー</option>
+            </optgroup>
+            <optgroup label="YAMAHA">
+                <option value='{"w":131, "p":12.0}'>NMAX 125</option>
+                <option value='{"w":131, "p":15.0}'>NMAX 155</option>
+                <option value='{"w":168, "p":12.0}'>トリシティ 125</option>
+                <option value='{"w":172, "p":15.0}'>トリシティ 155</option>
+                <option value='{"w":125, "p":12.0}'>シグナス グリファス/X FORCE</option>
+                <option value='{"w":78, "p":4.5}'>JOG/VINO (50cc)</option>
+                <option value='{"w":95, "p":8.3}'>JOG 125/アクシスZ</option>
+            </optgroup>
+            <optgroup label="SUZUKI">
+                <option value='{"w":105, "p":8.7}'>アドレス125/アヴェニス</option>
+                <option value='{"w":100, "p":8.8}'>アドレス110</option>
+                <option value='{"w":70, "p":3.7}'>レッツ (50cc)</option>
+                <option value='{"w":112, "p":8.6}'>バーグマンストリート125EX</option>
+            </optgroup>
+        </select>
+    </div>
+
+    <div class="control-group group-tune">
+        <label>
+            <span>🔧 WR重量セッティング</span>
+            <span class="val-display"><span id="val-wr">純正</span></span>
+        </label>
+        <input type="range" id="wrWeight" min="-3" max="3" step="0.5" value="0">
+        <div class="tune-desc">左: 軽い (加速重視) ⇔ 右: 重い (燃費重視)</div>
+
+        <div class="toggle-row">
+            <label style="margin:0; width:auto;">
+                <span style="display:flex; align-items:center; gap:5px;">
+                    ⚡ Dr.Pulley (異形ローラー)
+                </span>
+            </label>
+            <input type="checkbox" id="drPulley">
+        </div>
+        <div class="tune-desc" style="margin-top:5px;">ONで変速幅拡大(加速&最高速微増)</div>
+    </div>
+
+    <div class="control-group group-weight">
+        <label>
+            <span>🛠️ アクセ重量 <span class="unit">(固定)</span></span>
+            <span class="val-display"><span id="val-acc">5</span> <span class="unit">kg</span></span>
+        </label>
+        <input type="range" id="accWeight" min="0" max="30" step="0.5" value="5">
+        
+        <hr style="border:0; border-top:1px dashed #ddd; margin:15px 0;">
+
+        <label>
+            <span>🍔 商品重量 <span class="unit">(変動)</span></span>
+            <span class="val-display"><span id="val-cargo">0</span> <span class="unit">kg</span></span>
+        </label>
+        <input type="range" id="cargoWeight" min="0" max="60" step="0.5" value="0">
+    </div>
+
+    <div class="control-group group-cond">
+        <label>⛰️ 坂道角度: <span class="val-display" id="val-slope">0</span> 度</label>
+        <input type="range" id="slope" min="-5" max="15" step="0.5" value="0">
+        
+        <label style="margin-top:10px;">🔧 消耗度: <span id="val-wear-text" style="font-size:0.9rem;">新品</span></label>
+        <input type="range" id="wearLevel" min="0" max="30" step="1" value="0">
+        
+        <label style="margin-top:10px;">🛞 タイヤ: <span id="val-tire-text" style="font-size:0.9rem;">適正</span></label>
+        <input type="range" id="tireCondition" min="0" max="3" step="1" value="0">
+    </div>
+
+    <div style="display:none;">
+        <input type="number" id="bikeWeight" value="130">
+        <input type="number" id="powerPS" value="12.5">
+    </div>
+</div>
+
+<script>
+    const ctx = document.getElementById('accelChart').getContext('2d');
+    let chart;
+
+    const G = 9.8; 
+    const RHO = 1.225; 
+    const CdA = 0.5; 
+
+    // DOM要素
+    const elPreset = document.getElementById('bikePreset');
+    const elAcc = document.getElementById('accWeight');
+    const elCargo = document.getElementById('cargoWeight');
+    const elSlope = document.getElementById('slope');
+    const elWear = document.getElementById('wearLevel');
+    const elTire = document.getElementById('tireCondition');
+    const elBikeW = document.getElementById('bikeWeight');
+    const elPower = document.getElementById('powerPS');
+    const elWR = document.getElementById('wrWeight');
+    const elDrPulley = document.getElementById('drPulley');
+
+    function updateLabels() {
+        document.getElementById('val-acc').textContent = elAcc.value;
+        document.getElementById('val-cargo').textContent = elCargo.value;
+        document.getElementById('val-slope').textContent = elSlope.value;
+
+        const wrVal = parseFloat(elWR.value);
+        let wrText = "純正 (±0g)";
+        if(wrVal > 0) wrText = `重め (+${wrVal}g)`;
+        if(wrVal < 0) wrText = `軽め (${wrVal}g)`;
+        document.getElementById('val-wr').textContent = wrText;
+
+        const wear = parseInt(elWear.value);
+        document.getElementById('val-wear-text').textContent = wear > 15 ? "劣化" : "正常";
+        document.getElementById('val-tire-text').textContent = parseInt(elTire.value) >= 2 ? "危険" : "適正";
+    }
+
+    elPreset.addEventListener('change', function() {
+        if (this.value) {
+            const data = JSON.parse(this.value);
+            elBikeW.value = data.w;
+            elPower.value = data.p;
+            updateChart();
+        }
+    });
+
+    function calculate() {
+        updateLabels();
+
+        const slopeDeg = parseFloat(elSlope.value);
+        const accW = parseFloat(elAcc.value);
+        const cargoW = parseFloat(elCargo.value);
+        const bikeW = parseFloat(elBikeW.value);
+        const riderW = 65; 
+        const totalMass = bikeW + riderW + accW + cargoW;
+        const powerPS = parseFloat(elPower.value);
+        const powerWatts = powerPS * 735.5; 
+        const slopeRad = slopeDeg * (Math.PI / 180);
+
+        // チューニング係数
+        const wrSetting = parseFloat(elWR.value);
+        const lowSpeedBoost = 1.0 - (wrSetting * 0.02); 
+        const highSpeedLoss = 1.0 + (wrSetting * 0.015); 
+        const useDrPulley = elDrPulley.checked;
+        const drPulleyBonus = useDrPulley ? 1.05 : 1.0; 
+
+        // 消耗・抵抗係数
+        const wearFactor = parseFloat(elWear.value) / 100;
+        const currentEfficiency = 0.85 - (wearFactor * 0.5);
+        const tireLevel = parseInt(elTire.value);
+        const rollingResistCoef = 0.02 + (tireLevel * 0.012);
+
+        let velocity = 0; 
+        let time = 0;
+        let dist = 0; // 走行距離 (m)
+        let dataPoints = [];
+        
+        let timeTo30 = null;
+        let timeTo60 = null;
+        let timeTo500m = null; // 0-500m
+        let timeTo1km = null;  // 0-1000m
+        
+        const dt = 0.1;
+        let lastV = -1;
+        let stuckCount = 0;
+
+        // ループ上限を120秒に延長 (50ccなどで1km走るため)
+        while (time <= 120 && velocity * 3.6 < 120) {
+            let vKmh = velocity * 3.6;
+            dataPoints.push({x: time.toFixed(1), y: vKmh});
+
+            // タイム計測
+            if (timeTo30 === null && vKmh >= 30) timeTo30 = time;
+            if (timeTo60 === null && vKmh >= 60) timeTo60 = time;
+
+            // 距離計測
+            if (timeTo500m === null && dist >= 500) timeTo500m = time;
+            if (timeTo1km === null && dist >= 1000) timeTo1km = time;
+
+            if (Math.abs(vKmh - lastV) < 0.01) {
+                stuckCount++; 
+                // 1km到達していない場合は、最高速のまま走り続けるシミュレーションのためbreakしない
+                // ただし長時間変化なしならデータポイント削減のため間引きたいが、
+                // 簡易的に1km到達か120秒までは回す
+            } 
+            lastV = vKmh;
+
+            // 駆動力計算
+            let driveForce;
+            if (velocity < 3) { 
+                driveForce = (powerWatts * currentEfficiency / 2.5); 
+            } else {
+                driveForce = (powerWatts * currentEfficiency) / velocity;
+                let maxForce = 3500 * currentEfficiency; 
+                if(driveForce > maxForce) driveForce = maxForce;
+            }
+
+            // チューニング反映
+            if (vKmh < 45) driveForce *= lowSpeedBoost;
+            else if (vKmh > 60) driveForce *= highSpeedLoss; 
+            driveForce *= drPulleyBonus;
+            if (useDrPulley && vKmh > 70) driveForce *= 1.05; 
+
+            // 抵抗計算
+            const gravityF = totalMass * G * Math.sin(slopeRad);
+            const airF = 0.5 * RHO * CdA * (velocity * velocity);
+            const rollF = totalMass * G * rollingResistCoef * Math.cos(slopeRad);
+
+            const netForce = driveForce - (gravityF + airF + rollF);
+            let accel = netForce / totalMass;
+            if (accel < 0) accel = 0;
+
+            velocity += accel * dt;
+            dist += velocity * dt; // 距離加算
+            time += dt;
+        }
+
+        // 表示更新
+        document.getElementById('time30').textContent = timeTo30 ? timeTo30.toFixed(2) : "-";
+        document.getElementById('time60').textContent = timeTo60 ? timeTo60.toFixed(2) : "-";
+        
+        // 距離タイム更新
+        document.getElementById('time500m').textContent = timeTo500m ? timeTo500m.toFixed(1) : "不可";
+        document.getElementById('time1km').textContent = timeTo1km ? timeTo1km.toFixed(1) : "不可";
+
+        return dataPoints;
+    }
+
+    function updateChart() {
+        const data = calculate();
+        if (chart) {
+            chart.data.datasets[0].data = data;
+            // 軸の自動調整（時間が長い場合にグラフが見にくくなるのを防ぐため、データ長に合わせて最大値を可変に）
+            const maxTime = parseFloat(data[data.length-1].x);
+            chart.options.scales.x.max = maxTime > 25 ? maxTime : 25;
+            chart.update();
+        } else {
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    datasets: [{
+                        label: '速度推移',
+                        data: data,
+                        borderColor: '#9C27B0',
+                        backgroundColor: 'rgba(156, 39, 176, 0.1)',
+                        borderWidth: 3,
+                        pointRadius: 0,
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { type: 'linear', min: 0, max: 25, title: {display:true, text:'経過時間 (秒)'}, grid: {color: '#e0e0e0'} },
+                        y: { min: 0, max: 100, title: {display:true, text:'速度 (km/h)'}, grid: {color: '#e0e0e0'} }
+                    },
+                    plugins: { legend: {display: false}, tooltip: {mode: 'index', intersect: false} },
+                    animation: false,
+                    interaction: { intersect: false, mode: 'nearest' }
+                }
+            });
+        }
+    }
+
+    document.querySelectorAll('input, select').forEach(el => {
+        el.addEventListener('input', updateChart);
+    });
+
+    updateChart();
+</script>
+
+</body>
+</html>

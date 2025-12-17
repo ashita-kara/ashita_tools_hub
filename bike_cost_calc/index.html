@@ -1,367 +1,338 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>維持費シミュレーター Pro</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
-
-<style>
-    :root { --primary: #00c853; --accent: #2962ff; --bg: #f4f7f6; --text: #333; }
-    body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 10px; line-height: 1.5; }
-    .container { max-width: 800px; margin: 0 auto; background: #fff; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); overflow: hidden; padding-bottom: 20px; }
-    
-    header { background: var(--primary); color: #fff; padding: 20px; text-align: center; }
-    h1 { margin: 0; font-size: 20px; font-weight: bold; }
-    
-    /* 入力エリア共通 */
-    .section-title { background: #e8f5e9; padding: 15px; font-weight: bold; color: #2e7d32; border-bottom: 1px solid #c8e6c9; cursor: pointer; display: flex; justify-content: space-between; }
-    .section-content { display: none; padding: 15px; border-bottom: 1px solid #eee; }
-    .section-content.open { display: block; }
-    .input-group { margin-bottom: 15px; border-bottom: 1px dashed #eee; padding-bottom: 10px; }
-    .label-row { display: flex; justify-content: space-between; font-size: 14px; font-weight: bold; }
-    .input-row { display: flex; align-items: center; gap: 5px; margin-top: 5px; }
-    input, select { padding: 8px; border: 1px solid #ddd; border-radius: 6px; width: 100%; text-align: right; font-size: 16px; box-sizing: border-box; }
-    .unit { font-size: 12px; color: #666; white-space: nowrap; }
-
-    /* 結果エリア (ここだけスクショする) */
-    .result-area { background: #263238; color: #fff; padding: 30px 20px; text-align: center; border-radius: 0; }
-    
-    /* ★追加：黒枠内のバイク名表示 */
-    .display-bike-name { 
-        font-size: 28px; 
-        font-weight: bold; 
-        color: #fff; 
-        border: 2px solid #fff; 
-        display: inline-block;
-        padding: 5px 20px;
-        margin-bottom: 20px;
-        border-radius: 4px;
-        min-width: 200px;
-    }
-
-    .result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
-    .result-box { background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; }
-    .result-label { font-size: 12px; opacity: 0.7; }
-    .result-value { font-size: 18px; font-weight: bold; margin-top: 5px; }
-    .total-cost { font-size: 36px; font-weight: bold; color: #00e676; margin: 10px 0; }
-    
-    .chart-container { background: #fff; margin: 15px 0; padding: 10px; border-radius: 8px; }
-    
-    /* ボタンと名前入力エリア */
-    .action-area { padding: 20px; background: #e3f2fd; border-top: 1px solid #bbdefb; text-align: center; }
-    .name-input-wrap { margin-bottom: 15px; text-align: left; max-width: 300px; margin: 0 auto 15px; }
-    .name-input-label { font-size: 12px; color: #1565c0; font-weight: bold; margin-bottom: 4px; display: block; }
-    #myBikeNameInput { text-align: center; border: 2px solid #2962ff; color: #2962ff; font-weight: bold; }
-
-    .btn-ss { background: var(--accent); color: #fff; border: none; padding: 12px 30px; border-radius: 30px; font-size: 16px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.2); width: 100%; max-width: 300px; }
-    .btn-ss:active { transform: scale(0.95); }
-
-    /* その他 */
-    .toggle-container { display: flex; justify-content: flex-end; align-items: center; margin-bottom: 10px; font-size: 12px; }
-    .switch { position: relative; display: inline-block; width: 40px; height: 22px; margin-left: 8px; }
-    .switch input { opacity: 0; width: 0; height: 0; }
-    .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
-    .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
-    input:checked + .slider { background-color: var(--accent); }
-    input:checked + .slider:before { transform: translateX(18px); }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>バイク維持費シミュレーター Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
-<body>
+<body class="bg-gray-900 text-gray-100 min-h-screen font-sans">
 
-<div class="container">
-    <header>
-        <h1>🛵 維持費シミュレーター</h1>
+    <header class="bg-green-600 p-4 shadow-lg sticky top-0 z-50">
+        <div class="container mx-auto flex items-center justify-between">
+            <h1 class="text-xl font-bold flex items-center gap-2">
+                <i class="fas fa-motorcycle"></i> 維持費シミュレーター Pro
+            </h1>
+            <a href="../index.html" class="text-sm bg-green-700 px-3 py-1 rounded hover:bg-green-500 transition">Homeへ</a>
+        </div>
     </header>
 
-    <div style="padding:15px; border-bottom:1px solid #eee;">
-        <select id="presetSelect" onchange="loadPreset()">
-            <option value="custom">▼ 車種を選択して自動入力</option>
-            <optgroup label="HONDA">
-                <option value="pcx125">PCX 125</option>
-                <option value="pcx160">PCX 160</option>
-                <option value="adv160">ADV 160</option>
-                <option value="lead125">リード 125</option>
-                <option value="ct125">CT125 ハンターカブ</option>
-                <option value="c125">スーパーカブ C125</option>
-                <option value="benly110">ベンリィ 110</option>
-                <option value="canopy">ジャイロキャノピー</option>
-            </optgroup>
-            <optgroup label="YAMAHA">
-                <option value="nmax125">NMAX 125</option>
-                <option value="tricity125">トリシティ 125</option>
-                <option value="gryphus">シグナス グリファス</option>
-            </optgroup>
-            <optgroup label="SUZUKI">
-                <option value="address">アドレス 125</option>
-            </optgroup>
-        </select>
-    </div>
-
-    <div class="result-area" id="resultBox">
-        <div class="display-bike-name" id="displayBikeName">YOUR BIKE</div>
-
-        <div class="result-label">年間 維持費合計</div>
-        <div class="total-cost" id="resTotalYear">0 円</div>
+    <main class="container mx-auto p-4 max-w-2xl">
         
-        <div class="chart-container">
-            <canvas id="costChart"></canvas>
-        </div>
-        <div style="font-size:10px; color:#aaa; margin-top:5px;">※グラフ比較に駐車場代は含まれません</div>
+        <div class="bg-gray-800 rounded-xl p-6 mb-6 shadow-xl border border-gray-700">
+            <label class="block text-sm text-gray-400 mb-2">▼ 車種を選択して自動入力</label>
+            <select id="bike-select" onchange="loadPreset()" class="w-full p-3 bg-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-green-500 border border-gray-600">
+                <option value="custom">✓ カスタム（手動入力）</option>
 
-        <div class="result-grid">
-            <div class="result-box">
-                <div class="result-label">1kmコスト</div>
-                <div class="result-value" id="resCostPerKm">0 円</div>
+                <optgroup label="HONDA - PCX/Scooter 125-160cc">
+                    <option value="pcx125">PCX 125</option>
+                    <option value="pcx160">PCX 160</option>
+                    <option value="adv160">ADV 160</option>
+                    <option value="lead125">リード 125</option>
+                    <option value="forza125">FORZA 125</option>
+                    <option value="dio110">Dio 110</option>
+                    <option value="benly110">ベンリィ 110</option>
+                </optgroup>
+
+                <optgroup label="HONDA - Cub/Gear (カブ系)">
+                    <option value="sc_c125">スーパーカブ C125</option>
+                    <option value="ct125">CT125 ハンターカブ</option>
+                    <option value="sc50">スーパーカブ 50</option>
+                </optgroup>
+
+                <optgroup label="HONDA - 3 Wheels (3輪)">
+                    <option value="gyro_canopy">ジャイロキャノピー</option>
+                    <option value="gyro_x">ジャイロX</option>
+                </optgroup>
+
+                <optgroup label="HONDA - 50cc Scooter">
+                    <option value="tact">タクト (Tact)</option>
+                    <option value="benly50">ベンリィ 50</option>
+                </optgroup>
+
+                <optgroup label="YAMAHA - 125-155cc">
+                    <option value="nmax125">NMAX 125</option>
+                    <option value="nmax155">NMAX 155</option>
+                    <option value="cygnus_gryphus">シグナス グリファス</option>
+                    <option value="xforce">X FORCE</option>
+                    <option value="axis_z">アクシスZ</option>
+                    <option value="jog125">JOG 125</option>
+                    <option value="vino125">VINO 125 (輸入)</option>
+                </optgroup>
+
+                <optgroup label="YAMAHA - 3 Wheels (LMW)">
+                    <option value="tricity125">トリシティ 125</option>
+                    <option value="tricity155">トリシティ 155</option>
+                </optgroup>
+
+                <optgroup label="YAMAHA - 50cc">
+                    <option value="jog">JOG</option>
+                    <option value="vino">VINO</option>
+                </optgroup>
+
+                <optgroup label="SUZUKI - 110-125cc">
+                    <option value="address125">アドレス 125</option>
+                    <option value="avenis125">アヴェニス 125</option>
+                    <option value="burgman125">バーグマンストリート 125EX</option>
+                    <option value="address110">アドレス 110</option>
+                </optgroup>
+
+                <optgroup label="SUZUKI - 50cc">
+                    <option value="lets">レッツ (Let's)</option>
+                </optgroup>
+            </select>
+        </div>
+
+        <div class="bg-gray-800 rounded-xl p-6 mb-6 shadow-xl border border-gray-700">
+            <h2 class="text-lg font-bold mb-4 border-b border-gray-600 pb-2 text-green-400">走行・燃費データ</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1">月間走行距離 (km)</label>
+                    <input type="number" id="distance" value="1000" class="w-full p-2 bg-gray-900 border border-gray-600 rounded text-white text-right">
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1">実燃費 (km/L)</label>
+                    <input type="number" id="fuel-efficiency" value="45" class="w-full p-2 bg-gray-900 border border-gray-600 rounded text-white text-right">
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1">ガソリン単価 (円/L)</label>
+                    <input type="number" id="gas-price" value="170" class="w-full p-2 bg-gray-900 border border-gray-600 rounded text-white text-right">
+                </div>
             </div>
-            <div class="result-box">
-                <div class="result-label">月換算</div>
-                <div class="result-value" id="resCostPerMonth">0 円</div>
+
+            <h2 class="text-lg font-bold mt-6 mb-4 border-b border-gray-600 pb-2 text-blue-400">消耗品コスト (工賃込・概算)</h2>
+            <div class="space-y-4">
+                <div class="grid grid-cols-2 gap-2 items-center bg-gray-700 p-3 rounded">
+                    <div class="col-span-2 text-xs text-blue-200 mb-1">オイル交換 (費用 / 交換頻度)</div>
+                    <input type="number" id="oil-cost" value="2500" class="p-2 bg-gray-900 border border-gray-600 rounded text-white text-right text-sm" placeholder="円">
+                    <div class="flex items-center">
+                        <input type="number" id="oil-life" value="3000" class="w-full p-2 bg-gray-900 border border-gray-600 rounded text-white text-right text-sm">
+                        <span class="ml-1 text-xs text-gray-400">km</span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2 items-center bg-gray-700 p-3 rounded">
+                    <div class="col-span-2 text-xs text-blue-200 mb-1">タイヤ交換 (前後セット工賃込 / 寿命)</div>
+                    <input type="number" id="tire-cost" value="18000" class="p-2 bg-gray-900 border border-gray-600 rounded text-white text-right text-sm" placeholder="円">
+                    <div class="flex items-center">
+                        <input type="number" id="tire-life" value="15000" class="w-full p-2 bg-gray-900 border border-gray-600 rounded text-white text-right text-sm">
+                        <span class="ml-1 text-xs text-gray-400">km</span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2 items-center bg-gray-700 p-3 rounded">
+                    <div class="col-span-2 text-xs text-blue-200 mb-1">ベルト/チェーン・駆動系 (費用 / 寿命)</div>
+                    <input type="number" id="belt-cost" value="15000" class="p-2 bg-gray-900 border border-gray-600 rounded text-white text-right text-sm" placeholder="円">
+                    <div class="flex items-center">
+                        <input type="number" id="belt-life" value="20000" class="w-full p-2 bg-gray-900 border border-gray-600 rounded text-white text-right text-sm">
+                        <span class="ml-1 text-xs text-gray-400">km</span>
+                    </div>
+                </div>
             </div>
-            <div class="result-box">
-                <div class="result-label">年間距離</div>
-                <div class="result-value" id="resAnnualKm">0 km</div>
+
+            <button onclick="calculate()" class="w-full mt-6 bg-gradient-to-r from-green-500 to-blue-600 hover:from-green-400 hover:to-blue-500 text-white font-bold py-3 rounded-lg shadow-lg transform transition active:scale-95">
+                計算する
+            </button>
+        </div>
+
+        <div id="result-area" class="hidden animate-fade-in">
+            <div class="bg-gray-800 rounded-xl p-6 shadow-xl border border-gray-700 mb-6">
+                <h3 class="text-center text-gray-400 text-sm mb-2">1kmあたりの推定コスト</h3>
+                <div class="text-4xl font-bold text-center text-yellow-400 mb-1">
+                    <span id="cost-per-km">0</span> <span class="text-lg text-gray-300">円/km</span>
+                </div>
+                <div class="text-center text-xs text-gray-500 mb-6">（ガソリン代 + メンテナンス積立）</div>
+
+                <div class="grid grid-cols-2 gap-4 text-center border-t border-gray-700 pt-4">
+                    <div>
+                        <div class="text-gray-400 text-xs">月間の維持費</div>
+                        <div class="text-xl font-bold text-white"><span id="monthly-cost">0</span> 円</div>
+                    </div>
+                    <div>
+                        <div class="text-gray-400 text-xs">年間の維持費</div>
+                        <div class="text-xl font-bold text-white"><span id="yearly-cost">0</span> 円</div>
+                    </div>
+                </div>
             </div>
-            <div class="result-box">
-                <div class="result-label">1日あたり</div>
-                <div class="result-value" id="resCostPerDay">0 円</div>
+
+            <div class="bg-white rounded-xl p-4 shadow-xl mb-6">
+                <h3 class="text-gray-800 text-sm font-bold mb-2 text-center">メンテナンス費用比較 (1kmあたり・燃料費除く)</h3>
+                <canvas id="costChart"></canvas>
             </div>
         </div>
-        <div style="font-size:9px; color:#555; margin-top:15px; opacity:0.5;">Powered by Delivery Tools</div>
-    </div>
 
-    <div class="action-area" data-html2canvas-ignore="true">
-        <div class="name-input-wrap">
-            <label class="name-input-label">画像保存時に入力してください</label>
-            <input type="text" id="myBikeNameInput" placeholder="例：屋根付きトリシティ125" oninput="updateNameDisplay()">
-        </div>
-        <button class="btn-ss" onclick="takeScreenshot()">📸 この内容を画像保存する</button>
-    </div>
+    </main>
 
-    <div class="section-title active" onclick="toggleSection(this)">① 稼働・燃費設定</div>
-    <div class="section-content open">
-        <div class="input-group">
-            <div class="label-row">1日の走行距離 <span class="unit">km</span></div>
-            <div class="input-row"><input type="number" id="dailyKm" value="100"></div>
-        </div>
-        <div class="input-group">
-            <div class="label-row">週の稼働日数 <span class="unit">日</span></div>
-            <div class="input-row"><input type="number" id="daysPerWeek" value="5"></div>
-        </div>
-        <div class="input-group">
-            <div class="label-row">ガソリン価格 <span class="unit">円/L</span></div>
-            <div class="input-row"><input type="number" id="gasPrice" value="170"></div>
-        </div>
-        <div class="input-group">
-            <div class="label-row">実燃費 <span class="unit">km/L</span></div>
-            <div class="input-row"><input type="number" id="mpg" value="45"></div>
-        </div>
-    </div>
+    <script>
+        // ▼ データベース (工賃込み概算値)
+        // ※価格は標準的なバイクショップ価格を想定した推定値です。
+        const bikeData = {
+            // --- HONDA ---
+            "pcx125": { fuel: 48, oilPrice: 2500, oilLife: 3000, tirePrice: 22000, tireLife: 15000, beltPrice: 15000, beltLife: 20000 },
+            "pcx160": { fuel: 45, oilPrice: 2500, oilLife: 3000, tirePrice: 24000, tireLife: 14000, beltPrice: 16000, beltLife: 20000 },
+            "adv160": { fuel: 42, oilPrice: 2500, oilLife: 3000, tirePrice: 26000, tireLife: 12000, beltPrice: 16000, beltLife: 20000 },
+            "lead125": { fuel: 48, oilPrice: 2200, oilLife: 3000, tirePrice: 16000, tireLife: 15000, beltPrice: 14000, beltLife: 20000 },
+            "forza125": { fuel: 40, oilPrice: 3000, oilLife: 3000, tirePrice: 28000, tireLife: 15000, beltPrice: 18000, beltLife: 20000 },
+            "dio110": { fuel: 50, oilPrice: 2000, oilLife: 3000, tirePrice: 16000, tireLife: 18000, beltPrice: 13000, beltLife: 20000 },
+            "benly110": { fuel: 45, oilPrice: 2000, oilLife: 3000, tirePrice: 16000, tireLife: 15000, beltPrice: 13000, beltLife: 20000 },
+            
+            // カブ系 (ベルトなし→チェーン代として計算)
+            "sc_c125": { fuel: 65, oilPrice: 2000, oilLife: 3000, tirePrice: 15000, tireLife: 12000, beltPrice: 10000, beltLife: 20000 }, 
+            "ct125": { fuel: 60, oilPrice: 2000, oilLife: 3000, tirePrice: 16000, tireLife: 10000, beltPrice: 12000, beltLife: 15000 },
+            "sc50": { fuel: 75, oilPrice: 1800, oilLife: 3000, tirePrice: 12000, tireLife: 15000, beltPrice: 8000, beltLife: 20000 },
 
-    <div class="section-title" onclick="toggleSection(this)">② 固定費 (車両・保険)</div>
-    <div class="section-content">
-        <div class="input-group">
-            <div class="label-row">車両価格＋カスタム <span class="unit">円</span></div>
-            <div class="input-row"><input type="number" id="bikePrice" value="380000"></div>
-        </div>
-        <div class="input-group">
-            <div class="label-row">償却年数 <span class="unit">年</span></div>
-            <div class="input-row"><input type="number" id="amortYears" value="3"></div>
-        </div>
-        <div class="input-group">
-            <div class="label-row">保険・税金 (年額合計) <span class="unit">円</span></div>
-            <div class="input-row"><input type="number" id="fixedOtherYearly" value="35000"></div>
-        </div>
-        <div class="input-group">
-            <div class="label-row">駐車場 (月額) <span class="unit">円</span></div>
-            <div class="input-row"><input type="number" id="parkPrice" value="0"></div>
-        </div>
-    </div>
+            // 3輪 (タイヤ3本分で計算)
+            "gyro_canopy": { fuel: 35, oilPrice: 2200, oilLife: 3000, tirePrice: 28000, tireLife: 15000, beltPrice: 15000, beltLife: 15000 },
+            "gyro_x": { fuel: 35, oilPrice: 2200, oilLife: 3000, tirePrice: 25000, tireLife: 15000, beltPrice: 15000, beltLife: 15000 },
 
-    <div class="section-title" onclick="toggleSection(this)">③ 消耗品・メンテ費</div>
-    <div class="section-content">
-        <div class="toggle-container">
-            <span id="shopModeLabel">工賃込みモード</span>
-            <label class="switch">
-                <input type="checkbox" id="shopToggle" onchange="toggleShopMode()" checked>
-                <span class="slider"></span>
-            </label>
-        </div>
-        <div id="partsList"></div>
-        <div class="input-group" style="margin-top:20px; border-top:2px solid #eee; padding-top:10px;">
-             <div class="label-row">その他消耗品 (年額概算)</div>
-             <div class="input-row"><input type="number" id="miscYearly" value="20000"></div>
-        </div>
-    </div>
+            // 50cc
+            "tact": { fuel: 55, oilPrice: 1800, oilLife: 3000, tirePrice: 12000, tireLife: 15000, beltPrice: 10000, beltLife: 15000 },
+            "benly50": { fuel: 55, oilPrice: 1800, oilLife: 3000, tirePrice: 12000, tireLife: 15000, beltPrice: 10000, beltLife: 15000 },
 
-</div>
+            // --- YAMAHA ---
+            "nmax125": { fuel: 45, oilPrice: 2500, oilLife: 3000, tirePrice: 19000, tireLife: 15000, beltPrice: 15000, beltLife: 20000 },
+            "nmax155": { fuel: 42, oilPrice: 2500, oilLife: 3000, tirePrice: 20000, tireLife: 14000, beltPrice: 16000, beltLife: 20000 },
+            "cygnus_gryphus": { fuel: 40, oilPrice: 2500, oilLife: 3000, tirePrice: 19000, tireLife: 12000, beltPrice: 15000, beltLife: 20000 },
+            "xforce": { fuel: 40, oilPrice: 2500, oilLife: 3000, tirePrice: 20000, tireLife: 12000, beltPrice: 15000, beltLife: 20000 },
+            "axis_z": { fuel: 50, oilPrice: 2200, oilLife: 3000, tirePrice: 14000, tireLife: 18000, beltPrice: 13000, beltLife: 20000 },
+            "jog125": { fuel: 50, oilPrice: 2200, oilLife: 3000, tirePrice: 14000, tireLife: 15000, beltPrice: 13000, beltLife: 20000 },
+            "vino125": { fuel: 48, oilPrice: 2200, oilLife: 3000, tirePrice: 14000, tireLife: 15000, beltPrice: 13000, beltLife: 20000 },
+            
+            // 3輪 LMW
+            "tricity125": { fuel: 38, oilPrice: 2500, oilLife: 3000, tirePrice: 32000, tireLife: 15000, beltPrice: 16000, beltLife: 20000 },
+            "tricity155": { fuel: 36, oilPrice: 2500, oilLife: 3000, tirePrice: 34000, tireLife: 15000, beltPrice: 17000, beltLife: 20000 },
 
-<script>
-    const partsData = [
-        { id: 'p_tireF', name: 'Fタイヤ', cost: 6000, km: 15000, labor: 3000 },
-        { id: 'p_tireR', name: 'Rタイヤ', cost: 7000, km: 10000, labor: 4000 },
-        { id: 'p_belt', name: 'Vベルト駆動系', cost: 8000, km: 20000, labor: 6000 },
-        { id: 'p_brake', name: '前後ブレーキ', cost: 5000, km: 15000, labor: 4000 }
-    ];
+            // 50cc
+            "jog": { fuel: 55, oilPrice: 1800, oilLife: 3000, tirePrice: 12000, tireLife: 15000, beltPrice: 10000, beltLife: 15000 },
+            "vino": { fuel: 55, oilPrice: 1800, oilLife: 3000, tirePrice: 12000, tireLife: 15000, beltPrice: 10000, beltLife: 15000 },
 
-    const presets = {
-        pcx125: { name:"PCX125", mpg:48, price:360000 },
-        tricity125: { name:"トリシティ125", mpg:38, price:450000 },
-        canopy: { name:"ジャイロキャノピー", mpg:35, price:580000 },
-        c125: { name:"スーパーカブC125", mpg:65, price:440000 },
-        custom: { name:"YOUR BIKE", mpg:45, price:300000 }
-    };
+            // --- SUZUKI ---
+            "address125": { fuel: 50, oilPrice: 2000, oilLife: 3000, tirePrice: 15000, tireLife: 15000, beltPrice: 13000, beltLife: 20000 },
+            "avenis125": { fuel: 48, oilPrice: 2000, oilLife: 3000, tirePrice: 16000, tireLife: 15000, beltPrice: 13000, beltLife: 20000 },
+            "burgman125": { fuel: 48, oilPrice: 2200, oilLife: 3000, tirePrice: 16000, tireLife: 15000, beltPrice: 13000, beltLife: 20000 },
+            "address110": { fuel: 48, oilPrice: 2000, oilLife: 3000, tirePrice: 16000, tireLife: 18000, beltPrice: 13000, beltLife: 20000 },
+            "lets": { fuel: 55, oilPrice: 1600, oilLife: 3000, tirePrice: 11000, tireLife: 15000, beltPrice: 9000, beltLife: 15000 }
+        };
 
-    const avgData = { mpg: 45, costPerKm: 7.5 };
-    let costChart = null;
+        // グラフのインスタンス保持用
+        let myChart = null;
 
-    function init() {
-        const container = document.getElementById('partsList');
-        partsData.forEach(p => {
-            container.innerHTML += `
-            <div class="input-group">
-                <div class="label-row">${p.name}</div>
-                <div class="input-row"><span class="unit">部品</span><input type="number" id="${p.id}_cost" value="${p.cost}" class="recalc"></div>
-                <div class="input-row labor-row"><span class="unit" style="color:blue">工賃</span><input type="number" id="${p.id}_labor" value="${p.labor}" class="recalc"></div>
-                <div class="input-row"><span class="unit">交換km</span><input type="number" id="${p.id}_km" value="${p.km}" class="recalc"></div>
-            </div>`;
-        });
+        // プリセット読み込み
+        function loadPreset() {
+            const select = document.getElementById("bike-select");
+            const val = select.value;
+            if (val === "custom") return;
 
-        document.querySelectorAll('input, select').forEach(el => {
-            if(el.id !== 'myBikeNameInput') el.addEventListener('input', calculate);
-        });
-        
-        calculate();
-    }
-
-    function calculate() {
-        const dailyKm = Number(document.getElementById('dailyKm').value);
-        const daysWeek = Number(document.getElementById('daysPerWeek').value);
-        const annualKm = dailyKm * daysWeek * 52;
-
-        const bikePrice = Number(document.getElementById('bikePrice').value);
-        const amortYears = Number(document.getElementById('amortYears').value);
-        const fixedOther = Number(document.getElementById('fixedOtherYearly').value);
-        const parkMonthly = Number(document.getElementById('parkPrice').value);
-        
-        const depreciation = bikePrice / amortYears;
-        const parkingYearly = parkMonthly * 12;
-        const fixedYearly = depreciation + fixedOther + parkingYearly;
-
-        const gasPrice = Number(document.getElementById('gasPrice').value);
-        const mpg = Number(document.getElementById('mpg').value) || 1;
-        const fuelYearly = (annualKm / mpg) * gasPrice;
-
-        const miscYearly = Number(document.getElementById('miscYearly').value);
-        const isShop = document.getElementById('shopToggle').checked;
-        let partsYearly = 0;
-        
-        partsData.forEach(p => {
-            const cost = Number(document.getElementById(p.id + '_cost').value);
-            const labor = isShop ? Number(document.getElementById(p.id + '_labor').value) : 0;
-            const km = Number(document.getElementById(p.id + '_km').value) || 999999;
-            partsYearly += ((cost + labor) / km) * annualKm;
-        });
-
-        const totalYearly = fixedYearly + fuelYearly + miscYearly + partsYearly;
-        const costPerKm = annualKm > 0 ? totalYearly / annualKm : 0;
-
-        document.getElementById('resAnnualKm').innerText = Math.round(annualKm).toLocaleString() + ' km';
-        document.getElementById('resTotalYear').innerText = Math.round(totalYearly).toLocaleString() + ' 円';
-        document.getElementById('resCostPerMonth').innerText = Math.round(totalYearly/12).toLocaleString() + ' 円';
-        document.getElementById('resCostPerDay').innerText = Math.round(totalYearly/(daysWeek*52)).toLocaleString() + ' 円';
-        document.getElementById('resCostPerKm').innerText = (Math.round(costPerKm * 10) / 10).toLocaleString() + ' 円';
-
-        const pureCostYearly = totalYearly - parkingYearly;
-        const pureCostPerKm = annualKm > 0 ? pureCostYearly / annualKm : 0;
-        updateChart(mpg, pureCostPerKm);
-    }
-
-    function updateChart(userMpg, userCostPerKm) {
-        const ctx = document.getElementById('costChart').getContext('2d');
-        if (costChart) costChart.destroy();
-
-        costChart = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: ['燃費 (km/L)', '1km維持費 (円)'],
-                datasets: [
-                    {
-                        label: 'あなたのバイク',
-                        data: [userMpg, userCostPerKm],
-                        backgroundColor: ['#2962ff', '#00c853'],
-                        borderWidth: 1
-                    },
-                    {
-                        label: '平均 (125cc)',
-                        data: [avgData.mpg, avgData.costPerKm],
-                        backgroundColor: '#cfd8dc',
-                        borderWidth: 1
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: { position: 'bottom' },
-                    title: { display: true, text: '平均データとの比較' }
-                },
-                scales: { y: { beginAtZero: true } }
+            const data = bikeData[val];
+            if (data) {
+                document.getElementById("fuel-efficiency").value = data.fuel;
+                document.getElementById("oil-cost").value = data.oilPrice;
+                document.getElementById("oil-life").value = data.oilLife;
+                document.getElementById("tire-cost").value = data.tirePrice;
+                document.getElementById("tire-life").value = data.tireLife;
+                document.getElementById("belt-cost").value = data.beltPrice;
+                document.getElementById("belt-life").value = data.beltLife;
             }
-        });
-    }
-
-    // 名前入力の反映
-    function updateNameDisplay() {
-        const inputVal = document.getElementById('myBikeNameInput').value;
-        const display = document.getElementById('displayBikeName');
-        display.innerText = inputVal === '' ? 'YOUR BIKE' : inputVal;
-    }
-
-    // スクショ保存
-    function takeScreenshot() {
-        const target = document.getElementById('resultBox'); // 黒いボックスのみ指定
-        
-        html2canvas(target, {
-            scale: 2, // 高画質化
-            backgroundColor: "#263238" // 背景色指定
-        }).then(canvas => {
-            const link = document.createElement('a');
-            link.download = 'bike_cost_result.png';
-            link.href = canvas.toDataURL();
-            link.click();
-        });
-    }
-
-    function toggleSection(el) {
-        el.classList.toggle('active');
-        el.nextElementSibling.classList.toggle('open');
-    }
-    function toggleShopMode() {
-        const isShop = document.getElementById('shopToggle').checked;
-        document.querySelectorAll('.labor-row').forEach(row => {
-            row.style.display = isShop ? 'flex' : 'none';
-        });
-        calculate();
-    }
-    function loadPreset() {
-        const val = document.getElementById('presetSelect').value;
-        const data = presets[val];
-        if(data && val !== 'custom') {
-            document.getElementById('mpg').value = data.mpg;
-            document.getElementById('bikePrice').value = data.price;
-            
-            // 入力欄と表示の両方を更新
-            document.getElementById('myBikeNameInput').value = data.name;
-            document.getElementById('displayBikeName').innerText = data.name;
-            
+            // 自動計算
             calculate();
         }
-    }
 
-    init();
-</script>
+        // 計算ロジック
+        function calculate() {
+            // 入力値の取得
+            const distance = parseFloat(document.getElementById("distance").value);
+            const fuelEff = parseFloat(document.getElementById("fuel-efficiency").value);
+            const gasPrice = parseFloat(document.getElementById("gas-price").value);
+            
+            const oilCost = parseFloat(document.getElementById("oil-cost").value);
+            const oilLife = parseFloat(document.getElementById("oil-life").value);
+            
+            const tireCost = parseFloat(document.getElementById("tire-cost").value);
+            const tireLife = parseFloat(document.getElementById("tire-life").value);
+            
+            const beltCost = parseFloat(document.getElementById("belt-cost").value);
+            const beltLife = parseFloat(document.getElementById("belt-life").value);
 
+            // 1kmあたりのコスト計算
+            const gasPerKm = gasPrice / fuelEff;
+            const oilPerKm = oilCost / oilLife;
+            const tirePerKm = tireCost / tireLife;
+            const beltPerKm = beltCost / beltLife;
+            
+            const maintPerKm = oilPerKm + tirePerKm + beltPerKm;
+            const totalPerKm = gasPerKm + maintPerKm;
+
+            // 月間・年間コスト
+            const monthly = totalPerKm * distance;
+            const yearly = monthly * 12;
+
+            // 表示更新
+            document.getElementById("cost-per-km").innerText = totalPerKm.toFixed(1);
+            document.getElementById("monthly-cost").innerText = Math.round(monthly).toLocaleString();
+            document.getElementById("yearly-cost").innerText = Math.round(yearly).toLocaleString();
+
+            // 結果エリアを表示
+            document.getElementById("result-area").classList.remove("hidden");
+
+            // グラフを更新
+            updateChart(maintPerKm);
+        }
+
+        // グラフ描画
+        function updateChart(userMaintCost) {
+            const ctx = document.getElementById('costChart').getContext('2d');
+            
+            // 既存のチャートがあれば破棄
+            if (myChart) {
+                myChart.destroy();
+            }
+
+            // 比較用データ（目安）
+            const benchmarks = [
+                { label: '50ccスクーター平均', value: 2.1 }, // タイヤ安、ベルト安
+                { label: 'スーパーカブ110', value: 1.8 },   // チェーン安、タイヤ安、最強
+                { label: 'PCX/NMAX系', value: 3.5 },      // 標準的
+                { label: '3輪(ジャイロ/トリシティ)', value: 5.5 }, // タイヤ高い
+                { label: 'あなたの設定', value: userMaintCost }
+            ];
+
+            // チャート作成
+            myChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: benchmarks.map(b => b.label),
+                    datasets: [{
+                        label: '1kmあたりのメンテナンス費用 (円)',
+                        data: benchmarks.map(b => b.value),
+                        backgroundColor: benchmarks.map(b => 
+                            b.label === 'あなたの設定' ? 'rgba(255, 99, 132, 0.8)' : 'rgba(54, 162, 235, 0.6)'
+                        ),
+                        borderColor: benchmarks.map(b => 
+                            b.label === 'あなたの設定' ? 'rgba(255, 99, 132, 1)' : 'rgba(54, 162, 235, 1)'
+                        ),
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    indexAxis: 'y', // 横棒グラフにする
+                    responsive: true,
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: '円 / km'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+        }
+    </script>
 </body>
 </html>
