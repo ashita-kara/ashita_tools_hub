@@ -117,7 +117,8 @@
                 <option value='{"w":95, "p":8.3}'>JOG 125/アクシスZ</option>
             </optgroup>
             <optgroup label="SUZUKI">
-                <option value='{"w":105, "p":8.7}'>アドレス125/アヴェニス</option>
+                <option value='{"w":105, "p":8.7, "b":1.0}'>アドレス125 (現行)</option>
+                <option value='{"w":107, "p":8.7, "b":1.1}'>アヴェニス125 (加速重視)</option>
                 <option value='{"w":100, "p":8.8}'>アドレス110</option>
                 <option value='{"w":70, "p":3.7}'>レッツ (50cc)</option>
                 <option value='{"w":112, "p":8.6}'>バーグマンストリート125EX</option>
@@ -180,7 +181,7 @@
 <script>
     const ctx = document.getElementById('accelChart').getContext('2d');
     let chart;
-
+    let bikeBoost = 1.0;
     const G = 9.8; 
     const RHO = 1.225; 
     const CdA = 0.5; 
@@ -218,6 +219,7 @@
             const data = JSON.parse(this.value);
             elBikeW.value = data.w;
             elPower.value = data.p;
+            bikeBoost = data.b || 1.0;
             updateChart();
         }
     });
@@ -296,6 +298,7 @@
             // チューニング反映
             if (vKmh < 45) driveForce *= lowSpeedBoost;
             else if (vKmh > 60) driveForce *= highSpeedLoss; 
+            driveForce *= bikeBoost;
             driveForce *= drPulleyBonus;
             if (useDrPulley && vKmh > 70) driveForce *= 1.05; 
 
