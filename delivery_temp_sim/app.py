@@ -18,19 +18,22 @@ CITIES = {
 # 日本時間(JST)の定義
 JST = timezone(timedelta(hours=9))
 
-# --- CSS: シンプルな調整 ---
+# --- CSS: タイトル表示の修正と全体最適化 ---
 st.markdown("""
     <style>
-    /* 全体の余白を詰めてグラフを大きく見せる */
+    /* 画面上部の余白を確保してタイトルが隠れるのを防ぐ */
     .block-container {
-        padding-top: 1rem !important;
-        padding-left: 0.5rem !important;
-        padding-right: 0.5rem !important;
+        padding-top: 3.5rem !important; 
+        padding-left: 0.8rem !important;
+        padding-right: 0.8rem !important;
     }
-    /* スマホでタイトルの文字サイズを最適化 */
-    h1 {
-        font-size: 1.5rem !important;
-        padding: 0.5rem 0 !important;
+    /* タイトルのスタイルをスマホ向けに固定 */
+    .custom-title {
+        font-size: 1.3rem !important;
+        font-weight: bold;
+        text-align: left;
+        margin-bottom: 0.5rem;
+        color: #31333F;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -42,8 +45,8 @@ def calc_perceived_temp(t, h, v_kmh, shield_rate, rad_bonus):
     tn = 37 - (37 - t) / (0.68 - 0.0014 * h + 1/a) - 0.29 * t * (1 - h/100)
     return tn + rad_bonus
 
-# タイトルを標準機能で表示
-st.title("🛵 配達員向け 体感温度予報")
+# タイトルを独自クラスで表示（隠れないようにする）
+st.markdown('<div class="custom-title">🛵 配達員向け 体感温度予報</div>', unsafe_allow_html=True)
 
 # --- サイドバー ---
 st.sidebar.header("🔧 条件設定")
@@ -70,7 +73,7 @@ if data.get("list"):
     now_jst = datetime.now(JST)
     now_ts = now_jst.timestamp()
 
-    # 日本時間の「今」から先の予報を抽出
+    # 日本時間の「今」から先の予報を抽出（フィルタリング）
     filtered_list = [item for item in data["list"] if item["dt"] > now_ts - 5400]
 
     # 1画面に収まる24時間分（8データ）に限定
@@ -82,7 +85,7 @@ if data.get("list"):
         rain = item.get("rain", {}).get("3h", 0) / 3 
         
         day_label = "今日" if dt.date() == now_jst.date() else "明日"
-        time_str = f"{day_label}{dt.hour}時" # スペースを詰めて短縮
+        time_str = f"{day_label}{dt.hour}時"
         
         rad_bonus = (monthly_rad.get(dt.month, 2) if is_sunny_mode else 0) if 7 <= dt.hour <= 17 else 0
         p_temp = calc_perceived_temp(t, h, speed + (w_speed * 3.6), shield, rad_bonus)
@@ -92,8 +95,8 @@ if data.get("list"):
     df = pd.DataFrame(rows)
 
     # --- グラフ作成 ---
-    fig = make_subplots(rows=2, cols=1, shared_xaxes=False, vertical_spacing=0.2, 
-                        subplot_titles=("温度推移 (℃)", "天候詳細 (降水・風速)"))
+    fig = make_subplots(rows=2, cols=1, shared_xaxes=False, vertical_spacing=0.25, 
+                        subplot_titles=("温度推移 (℃)", "天候詳細 (雨・風)"))
 
     fig.add_trace(go.Scatter(x=df["日時"], y=df["気温"], name="予報気温", line=dict(color='orange', dash='dot')), row=1, col=1)
     fig.add_trace(go.Scatter(x=df["日時"], y=df["体感温度"], name="体感温度", line=dict(color='cyan', width=4)), row=1, col=1)
@@ -105,7 +108,7 @@ if data.get("list"):
         dragmode=False,
         hovermode="x unified",
         margin=dict(l=10, r=10, t=30, b=10),
-        legend=dict(orientation="h", yanchor="top", y=-0.2, xanchor="center", x=0.5), # 凡例を下に
+        legend=dict(orientation="h", yanchor="top", y=-0.25, xanchor="center", x=0.5),
         template="plotly_white"
     )
 
