@@ -18,25 +18,24 @@ CITIES = {
 # 日本時間(JST)の定義
 JST = timezone(timedelta(hours=9))
 
-# --- 強力なCSS: スマホで強制的に横スクロールを発生させる ---
+# --- CSS: タイトルサイズの調整と全体の最適化 ---
 st.markdown("""
     <style>
-    /* グラフを包むエリアに横スクロールを強制 */
-    .scroll-container {
-        overflow-x: auto !important;
-        overflow-y: hidden !important;
-        -webkit-overflow-scrolling: touch;
-        width: 100%;
-        margin-bottom: 20px;
+    /* スマホ（画面幅640px以下）でタイトルを小さくする */
+    @media (max-width: 640px) {
+        .main-title {
+            font-size: 1.5rem !important;
+            line-height: 1.2 !important;
+        }
     }
-    /* グラフ本体の横幅を固定（スマホ画面をはみ出させる） */
-    .scroll-content {
-        width: 1200px !important;
+    /* PCでは標準サイズ */
+    .main-title {
+        font-size: 2.5rem;
+        font-weight: bold;
+        margin-bottom: 1rem;
     }
-    /* Streamlit標準のパディングをスマホ用に調整 */
     .block-container {
-        padding-top: 2rem;
-        padding-bottom: 2rem;
+        padding-top: 1.5rem;
         padding-left: 1rem;
         padding-right: 1rem;
     }
@@ -51,7 +50,9 @@ def calc_perceived_temp(t, h, v_kmh, shield_rate, rad_bonus):
     return tn + rad_bonus
 
 st.set_page_config(page_title="配達員体感温度予報", layout="wide")
-st.title("🛵 配達員向け リアル体感温度予報")
+
+# タイトルをCSSクラス付きのHTMLで描画
+st.markdown('<div class="main-title">🛵 配達員向け リアル体感温度予報</div>', unsafe_allow_html=True)
 
 # --- サイドバー ---
 st.sidebar.header("🔧 条件設定")
@@ -75,23 +76,21 @@ if data.get("list"):
 
     rows = []
     monthly_rad = {1:0.5, 2:1, 3:2, 4:3, 5:4, 6:4, 7:6, 8:7, 9:5, 10:3, 11:1.5, 12:0.5}
-    
-    # 日本時間の現在時刻を取得
     now_jst = datetime.now(JST)
     now_ts = now_jst.timestamp()
 
-    # フィルタリング：日本時間の「現在」より前の予報（古いデータ）を捨てる
+    # 日本時間の現在より後の予報を抽出
     filtered_list = [item for item in data["list"] if item["dt"] > now_ts - 5400]
 
-    for item in filtered_list[:12]: # 36時間分
-        # APIの時刻(UTC)を日本時間に変換
+    # 表示範囲を24時間（3時間おき×8データ）に設定
+    for item in filtered_list[:8]:
         dt = datetime.fromtimestamp(item["dt"], JST)
         t = item["main"]["temp"]
         h = item["main"]["humidity"]
         w_speed = item["wind"]["speed"]
         rain = item.get("rain", {}).get("3h", 0) / 3 
         
-        day_label = "今日" if dt.date() == now_jst.date() else "明日" if dt.date() == (now_jst + timedelta(days=1)).date() else dt.strftime("%d日")
+        day_label = "今日" if dt.date() == now_jst.date() else "明日"
         time_str = f"{day_label} {dt.hour}時"
         
         rad_bonus = (monthly_rad.get(dt.month, 2) if is_sunny_mode else 0) if 7 <= dt.hour <= 17 else 0
@@ -111,8 +110,7 @@ if data.get("list"):
     fig.add_trace(go.Scatter(x=df["日時"], y=df["風速"], name="風(m/s)", line=dict(color='gray', width=1)), row=2, col=1)
 
     fig.update_layout(
-        height=600,
-        width=1200, # 確実にスクロールさせるための広めの幅
+        height=550,
         dragmode=False,
         hovermode="x unified",
         margin=dict(l=40, r=40, t=50, b=100),
@@ -120,21 +118,16 @@ if data.get("list"):
         template="plotly_white"
     )
 
-    fig.update_xaxes(showticklabels=True, tickangle=-45, fixedrange=True)
+    fig.update_xaxes(showticklabels=True, tickangle=-45, fixedrange=True, tickfont=dict(size=10))
     fig.update_yaxes(fixedrange=True)
 
-    # --- 強力なHTMLラッパー ---
-    # CSSクラス 'scroll-container' と 'scroll-content' を適用
-    st.markdown('<div class="scroll-container"><div class="scroll-content">', unsafe_allow_html=True)
-    st.plotly_chart(fig, use_container_width=False, config={'displayModeBar': False})
-    st.markdown('</div></div>', unsafe_allow_html=True)
+    # グラフを表示
+    st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
     # --- アドバイス ---
     st.subheader("💡 直近のアドバイス")
-    # スマホ用に1列で表示
     for i in range(min(len(df), 3)):
         st.write(f"**{df['日時'].iloc[i]}** : 体感 **{df['体感温度'].iloc[i]} ℃**")
-        # 前述のアドバイスロジックをここで呼び出し（省略）
         st.divider()
 else:
-    st.error("データの取得に失敗しました。")
+    st.error("最新データの取得に失敗しました。")
