@@ -15,23 +15,25 @@ CITIES = {
     "福岡": {"lat": 33.5904, "lon": 130.4017}, "沖縄": {"lat": 26.2124, "lon": 127.6809},
 }
 
+# 日本時間(JST)の定義
 JST = timezone(timedelta(hours=9))
 
-# --- CSS: タイトルサイズと余白の最終調整 ---
+# --- CSS: タイトル表示の修正と全体最適化 ---
 st.markdown("""
     <style>
+    /* 画面上部の余白を確保してタイトルが隠れるのを防ぐ */
     .block-container {
-        padding-top: 4rem !important; 
+        padding-top: 3.5rem !important; 
         padding-left: 0.8rem !important;
         padding-right: 0.8rem !important;
     }
+    /* タイトルのスタイルをスマホ向けに固定 */
     .custom-title {
-        font-size: 1.8rem !important; /* 少し大きくしました */
+        font-size: 1.3rem !important;
         font-weight: bold;
         text-align: left;
-        margin-bottom: 0.8rem;
+        margin-bottom: 0.5rem;
         color: #31333F;
-        line-height: 1.2;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -43,7 +45,8 @@ def calc_perceived_temp(t, h, v_kmh, shield_rate, rad_bonus):
     tn = 37 - (37 - t) / (0.68 - 0.0014 * h + 1/a) - 0.29 * t * (1 - h/100)
     return tn + rad_bonus
 
-st.markdown('<div class="custom-title">🛵 配達員向け<br>体感温度予報</div>', unsafe_allow_html=True)
+# タイトルを独自クラスで表示（隠れないようにする）
+st.markdown('<div class="custom-title">🛵 配達員向け 体感温度予報</div>', unsafe_allow_html=True)
 
 # --- サイドバー ---
 st.sidebar.header("🔧 条件設定")
@@ -70,8 +73,10 @@ if data.get("list"):
     now_jst = datetime.now(JST)
     now_ts = now_jst.timestamp()
 
+    # 日本時間の「今」から先の予報を抽出（フィルタリング）
     filtered_list = [item for item in data["list"] if item["dt"] > now_ts - 5400]
 
+    # 1画面に収まる24時間分（8データ）に限定
     for item in filtered_list[:8]:
         dt = datetime.fromtimestamp(item["dt"], JST)
         t = item["main"]["temp"]
@@ -90,7 +95,7 @@ if data.get("list"):
     df = pd.DataFrame(rows)
 
     # --- グラフ作成 ---
-    fig = make_subplots(rows=2, cols=1, shared_xaxes=False, vertical_spacing=0.2, 
+    fig = make_subplots(rows=2, cols=1, shared_xaxes=False, vertical_spacing=0.25, 
                         subplot_titles=("温度推移 (℃)", "天候詳細 (雨・風)"))
 
     fig.add_trace(go.Scatter(x=df["日時"], y=df["気温"], name="予報気温", line=dict(color='orange', dash='dot')), row=1, col=1)
@@ -103,7 +108,7 @@ if data.get("list"):
         dragmode=False,
         hovermode="x unified",
         margin=dict(l=10, r=10, t=30, b=10),
-        legend=dict(orientation="h", yanchor="top", y=-0.15, xanchor="center", x=0.5), # 凡例位置の微調整
+        legend=dict(orientation="h", yanchor="top", y=-0.25, xanchor="center", x=0.5),
         template="plotly_white"
     )
 
