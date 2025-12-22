@@ -3,7 +3,7 @@ import requests
 import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import time
 
 # --- 設定 ---
@@ -15,6 +15,34 @@ CITIES = {
     "福岡": {"lat": 33.5904, "lon": 130.4017}, "沖縄": {"lat": 26.2124, "lon": 127.6809},
 }
 
+# 日本時間(JST)の定義
+JST = timezone(timedelta(hours=9))
+
+# --- 強力なCSS: スマホで強制的に横スクロールを発生させる ---
+st.markdown("""
+    <style>
+    /* グラフを包むエリアに横スクロールを強制 */
+    .scroll-container {
+        overflow-x: auto !important;
+        overflow-y: hidden !important;
+        -webkit-overflow-scrolling: touch;
+        width: 100%;
+        margin-bottom: 20px;
+    }
+    /* グラフ本体の横幅を固定（スマホ画面をはみ出させる） */
+    .scroll-content {
+        width: 1200px !important;
+    }
+    /* Streamlit標準のパディングをスマホ用に調整 */
+    .block-container {
+        padding-top: 2rem;
+        padding-bottom: 2rem;
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
 def calc_perceived_temp(t, h, v_kmh, shield_rate, rad_bonus):
     v_ms = (v_kmh * (1 - shield_rate/100)) / 3.6
     v_ms = max(v_ms, 0.1)
@@ -25,7 +53,7 @@ def calc_perceived_temp(t, h, v_kmh, shield_rate, rad_bonus):
 st.set_page_config(page_title="配達員体感温度予報", layout="wide")
 st.title("🛵 配達員向け リアル体感温度予報")
 
-# --- サイドバー設定 ---
+# --- サイドバー ---
 st.sidebar.header("🔧 条件設定")
 selected_city = st.sidebar.selectbox("都市を選択", list(CITIES.keys()))
 speed = st.sidebar.slider("走行速度 (km/h)", 0, 80, 40)
@@ -47,20 +75,23 @@ if data.get("list"):
 
     rows = []
     monthly_rad = {1:0.5, 2:1, 3:2, 4:3, 5:4, 6:4, 7:6, 8:7, 9:5, 10:3, 11:1.5, 12:0.5}
-    now_ts = time.time()
-    now_dt = datetime.now()
+    
+    # 日本時間の現在時刻を取得
+    now_jst = datetime.now(JST)
+    now_ts = now_jst.timestamp()
 
-    # 現在より前のデータを除去
+    # フィルタリング：日本時間の「現在」より前の予報（古いデータ）を捨てる
     filtered_list = [item for item in data["list"] if item["dt"] > now_ts - 5400]
 
     for item in filtered_list[:12]: # 36時間分
-        dt = datetime.fromtimestamp(item["dt"])
+        # APIの時刻(UTC)を日本時間に変換
+        dt = datetime.fromtimestamp(item["dt"], JST)
         t = item["main"]["temp"]
         h = item["main"]["humidity"]
         w_speed = item["wind"]["speed"]
         rain = item.get("rain", {}).get("3h", 0) / 3 
         
-        day_label = "今日" if dt.date() == now_dt.date() else "明日" if dt.date() == (now_dt + timedelta(days=1)).date() else dt.strftime("%d日")
+        day_label = "今日" if dt.date() == now_jst.date() else "明日" if dt.date() == (now_jst + timedelta(days=1)).date() else dt.strftime("%d日")
         time_str = f"{day_label} {dt.hour}時"
         
         rad_bonus = (monthly_rad.get(dt.month, 2) if is_sunny_mode else 0) if 7 <= dt.hour <= 17 else 0
@@ -71,7 +102,6 @@ if data.get("list"):
     df = pd.DataFrame(rows)
 
     # --- グラフ作成 ---
-    # shared_xaxes=False にして、それぞれのグラフに軸を表示させる
     fig = make_subplots(rows=2, cols=1, shared_xaxes=False, vertical_spacing=0.25, 
                         subplot_titles=("温度推移 (℃)", "天候詳細 (降水・風速)"))
 
@@ -86,24 +116,25 @@ if data.get("list"):
         dragmode=False,
         hovermode="x unified",
         margin=dict(l=40, r=40, t=50, b=100),
-        legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="right", x=1)
+        legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="right", x=1),
+        template="plotly_white"
     )
 
-    # 両方のグラフに斜めの日時ラベルを表示し、ズームを禁止
     fig.update_xaxes(showticklabels=True, tickangle=-45, fixedrange=True)
     fig.update_yaxes(fixedrange=True)
 
-    # --- HTMLラッパーによる横スクロールの強制 ---
-    # st.plotly_chartを直接使うのではなく、スクロール可能なdivで包む
-    st.markdown('<div style="overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch;">', unsafe_allow_html=True)
+    # --- 強力なHTMLラッパー ---
+    # CSSクラス 'scroll-container' と 'scroll-content' を適用
+    st.markdown('<div class="scroll-container"><div class="scroll-content">', unsafe_allow_html=True)
     st.plotly_chart(fig, use_container_width=False, config={'displayModeBar': False})
-    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown('</div></div>', unsafe_allow_html=True)
 
     # --- アドバイス ---
     st.subheader("💡 直近のアドバイス")
-    cols = st.columns(min(len(df), 3))
-    for i in range(3):
-        with cols[i]:
-            st.metric(label=df['日時'].iloc[i], value=f"{df['体感温度'].iloc[i]} ℃")
+    # スマホ用に1列で表示
+    for i in range(min(len(df), 3)):
+        st.write(f"**{df['日時'].iloc[i]}** : 体感 **{df['体感温度'].iloc[i]} ℃**")
+        # 前述のアドバイスロジックをここで呼び出し（省略）
+        st.divider()
 else:
     st.error("データの取得に失敗しました。")
