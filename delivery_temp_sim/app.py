@@ -4,7 +4,6 @@ import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from datetime import datetime, timedelta, timezone
-import time
 
 # --- 設定 ---
 API_KEY = "3f080119fc55babcb348d038ac5017c9"
@@ -15,36 +14,20 @@ CITIES = {
     "福岡": {"lat": 33.5904, "lon": 130.4017}, "沖縄": {"lat": 26.2124, "lon": 127.6809},
 }
 
-# 日本時間(JST)の定義
+# 日本時間(JST)
 JST = timezone(timedelta(hours=9))
 
-# --- CSS: サイドバーボタンを死守し、不要な要素だけを完全に抹消 ---
+# --- CSS: 無理な非表示設定を廃止し、レイアウト調整のみに集中 ---
 st.markdown("""
     <style>
-    /* 1. 画面全体の余白調整 */
+    /* 画面上部の余白を確保（タイトルが隠れないように） */
     .block-container {
-        padding-top: 2.5rem !important; 
+        padding-top: 3rem !important; 
         padding-left: 0.8rem !important;
         padding-right: 0.8rem !important;
     }
 
-    /* 2. ヘッダー：背景を透明にしつつ、左側のボタン(>> / <<)をタップ可能にする */
-    header[data-testid="stHeader"] {
-        background-color: rgba(0,0,0,0) !important;
-    }
-
-    /* 3. 右側のツールバー（GitHub/Deploy/メニュー）だけをピンポイントで削除 */
-    div[data-testid="stToolbar"], 
-    .stAppDeployButton {
-        display: none !important;
-    }
-
-    /* 4. 右下の赤いフッター（Hosted with Streamlit）を完全に削除 */
-    footer {
-        display: none !important;
-    }
-
-    /* 5. タイトルのスタイル設定 */
+    /* タイトルをシンプルに見やすく */
     .custom-title {
         font-size: 1.5rem !important;
         font-weight: bold;
@@ -53,9 +36,9 @@ st.markdown("""
         color: #31333F;
     }
     
-    /* 右下の小さなステータスウィジェットも削除 */
-    div[data-testid="stStatusWidget"] {
-        display: none !important;
+    /* グラフの余白調整 */
+    .main .block-container {
+        max-width: 100%;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -67,7 +50,7 @@ def calc_perceived_temp(t, h, v_kmh, shield_rate, rad_bonus):
     tn = 37 - (37 - t) / (0.68 - 0.0014 * h + 1/a) - 0.29 * t * (1 - h/100)
     return tn + rad_bonus
 
-# タイトルを1段で表示
+# タイトル表示
 st.markdown('<div class="custom-title">🛵 配達員向け 体感温度予報</div>', unsafe_allow_html=True)
 
 # --- サイドバー ---
