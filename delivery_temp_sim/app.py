@@ -18,45 +18,45 @@ CITIES = {
 # 日本時間(JST)の定義
 JST = timezone(timedelta(hours=9))
 
-# --- CSS: エリア選択ボタンを死守し、不要な要素だけを完全に消す ---
+# --- CSS: 物理的に不要な要素を削除し、エリア選択ボタンを最前面に出す ---
 st.markdown("""
     <style>
-    /* 1. 画面全体の余白調整 */
+    /* 1. 画面全体のパディング調整 */
     .block-container {
-        padding-top: 2.5rem !important; 
+        padding-top: 2rem !important; 
         padding-left: 0.8rem !important;
         padding-right: 0.8rem !important;
     }
 
-    /* 2. ヘッダー：左側のボタン(>> / <<)は残し、右側のツールバーだけを消す */
+    /* 2. ヘッダー：背景を完全に透明化し、ボタンだけを有効にする */
     header[data-testid="stHeader"] {
-        background-color: rgba(0,0,0,0) !important; /* 背景を透明にして圧迫感をなくす */
+        background-color: rgba(0,0,0,0) !important;
+        pointer-events: none; /* ヘッダー自体の当たり判定を消す */
     }
-    /* 右側のGitHub・Deploy・メニューボタンのコンテナをピンポイントで削除 */
+    
+    /* 3. 左側のエリア選択ボタン(>> / <<)だけ当たり判定を復活させる */
+    header[data-testid="stHeader"] button {
+        pointer-events: auto !important;
+    }
+
+    /* 4. 右側のツールバー（GitHub/Deploy/メニュー）を強制排除 */
     div[data-testid="stToolbar"], 
-    .stAppDeployButton,
-    header[data-testid="stHeader"] > div:nth-child(2) {
+    .stAppDeployButton {
         display: none !important;
     }
 
-    /* 3. フッター：右下の赤いバッジを完全に削除 */
+    /* 5. フッター（右下の赤いバッジ）を完全に抹消 */
     footer {
         display: none !important;
     }
 
-    /* 4. タイトルのスタイル設定（スマホで見やすいサイズ） */
+    /* 6. タイトルのスタイル */
     .custom-title {
         font-size: 1.5rem !important;
         font-weight: bold;
         text-align: left;
         margin-bottom: 0.5rem;
         color: #31333F;
-        white-space: nowrap;
-    }
-
-    /* 右下の小さなステータスアイコンも削除 */
-    div[data-testid="stStatusWidget"] {
-        display: none !important;
     }
     </style>
     """, unsafe_allow_html=True)
