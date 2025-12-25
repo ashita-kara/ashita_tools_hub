@@ -18,7 +18,7 @@ CITIES = {
 # 日本時間(JST)の定義
 JST = timezone(timedelta(hours=9))
 
-# --- CSS: タイトルを1段で綺麗に収める設定 ---
+# --- CSS: タイトル調整、および不要なStreamlit要素の削除 ---
 st.markdown("""
     <style>
     /* 1. タイトルが隠れないように上部余白を調整 */
