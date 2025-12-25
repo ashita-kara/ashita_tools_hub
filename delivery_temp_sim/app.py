@@ -21,19 +21,36 @@ JST = timezone(timedelta(hours=9))
 # --- CSS: タイトルを1段で綺麗に収める設定 ---
 st.markdown("""
     <style>
+    /* 1. タイトルが隠れないように上部余白を調整 */
     .block-container {
-        padding-top: 3.5rem !important; 
+        padding-top: 2rem !important; 
         padding-left: 0.8rem !important;
         padding-right: 0.8rem !important;
     }
+    
+    /* 2. 右上のGitHubアイコンやメニューボタンを非表示にする */
+    header {
+        visibility: hidden;
+    }
+    
+    /* 3. 右下の "Hosted with Streamlit" バッジを非表示にする */
+    footer {
+        visibility: hidden;
+    }
+    
+    /* 4. タイトルのスタイル設定（1段で表示） */
     .custom-title {
-        font-size: 1.5rem !important; /* 1段で収まりやすいサイズ */
+        font-size: 1.5rem !important;
         font-weight: bold;
         text-align: left;
         margin-bottom: 0.5rem;
         color: #31333F;
-        white-space: nowrap; /* 折り返しを防止 */
+        white-space: nowrap;
     }
+    
+    /* ステータスウィジェット（右下の小さなアイコン）も念のため非表示 */
+    #MainMenu {visibility: hidden;}
+    div[data-testid="stStatusWidget"] {display: none;}
     </style>
     """, unsafe_allow_html=True)
 
