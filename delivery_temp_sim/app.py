@@ -18,27 +18,33 @@ CITIES = {
 # 日本時間(JST)の定義
 JST = timezone(timedelta(hours=9))
 
-# --- CSS: タイトル調整、および不要なStreamlit要素の削除 ---
+# --- CSS: エリア選択ボタンを死守し、不要な要素だけを完全に消す ---
 st.markdown("""
     <style>
-    /* 1. タイトルが隠れないように上部余白を調整 */
+    /* 1. 画面全体の余白調整 */
     .block-container {
-        padding-top: 2rem !important; 
+        padding-top: 2.5rem !important; 
         padding-left: 0.8rem !important;
         padding-right: 0.8rem !important;
     }
-    
-    /* 2. 右上のGitHubアイコンやメニューボタンを非表示にする */
-    header {
-        visibility: hidden;
+
+    /* 2. ヘッダー：左側のボタン(>> / <<)は残し、右側のツールバーだけを消す */
+    header[data-testid="stHeader"] {
+        background-color: rgba(0,0,0,0) !important; /* 背景を透明にして圧迫感をなくす */
     }
-    
-    /* 3. 右下の "Hosted with Streamlit" バッジを非表示にする */
+    /* 右側のGitHub・Deploy・メニューボタンのコンテナをピンポイントで削除 */
+    div[data-testid="stToolbar"], 
+    .stAppDeployButton,
+    header[data-testid="stHeader"] > div:nth-child(2) {
+        display: none !important;
+    }
+
+    /* 3. フッター：右下の赤いバッジを完全に削除 */
     footer {
-        visibility: hidden;
+        display: none !important;
     }
-    
-    /* 4. タイトルのスタイル設定（1段で表示） */
+
+    /* 4. タイトルのスタイル設定（スマホで見やすいサイズ） */
     .custom-title {
         font-size: 1.5rem !important;
         font-weight: bold;
@@ -47,10 +53,11 @@ st.markdown("""
         color: #31333F;
         white-space: nowrap;
     }
-    
-    /* ステータスウィジェット（右下の小さなアイコン）も念のため非表示 */
-    #MainMenu {visibility: hidden;}
-    div[data-testid="stStatusWidget"] {display: none;}
+
+    /* 右下の小さなステータスアイコンも削除 */
+    div[data-testid="stStatusWidget"] {
+        display: none !important;
+    }
     </style>
     """, unsafe_allow_html=True)
 
