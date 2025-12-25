@@ -18,45 +18,44 @@ CITIES = {
 # 日本時間(JST)の定義
 JST = timezone(timedelta(hours=9))
 
-# --- CSS: 物理的に不要な要素を削除し、エリア選択ボタンを最前面に出す ---
+# --- CSS: サイドバーボタンを死守し、不要な要素だけを完全に抹消 ---
 st.markdown("""
     <style>
-    /* 1. 画面全体のパディング調整 */
+    /* 1. 画面全体の余白調整 */
     .block-container {
-        padding-top: 2rem !important; 
+        padding-top: 2.5rem !important; 
         padding-left: 0.8rem !important;
         padding-right: 0.8rem !important;
     }
 
-    /* 2. ヘッダー：背景を完全に透明化し、ボタンだけを有効にする */
+    /* 2. ヘッダー：背景を透明にしつつ、左側のボタン(>> / <<)をタップ可能にする */
     header[data-testid="stHeader"] {
         background-color: rgba(0,0,0,0) !important;
-        pointer-events: none; /* ヘッダー自体の当たり判定を消す */
-    }
-    
-    /* 3. 左側のエリア選択ボタン(>> / <<)だけ当たり判定を復活させる */
-    header[data-testid="stHeader"] button {
-        pointer-events: auto !important;
     }
 
-    /* 4. 右側のツールバー（GitHub/Deploy/メニュー）を強制排除 */
+    /* 3. 右側のツールバー（GitHub/Deploy/メニュー）だけをピンポイントで削除 */
     div[data-testid="stToolbar"], 
     .stAppDeployButton {
         display: none !important;
     }
 
-    /* 5. フッター（右下の赤いバッジ）を完全に抹消 */
+    /* 4. 右下の赤いフッター（Hosted with Streamlit）を完全に削除 */
     footer {
         display: none !important;
     }
 
-    /* 6. タイトルのスタイル */
+    /* 5. タイトルのスタイル設定 */
     .custom-title {
         font-size: 1.5rem !important;
         font-weight: bold;
         text-align: left;
         margin-bottom: 0.5rem;
         color: #31333F;
+    }
+    
+    /* 右下の小さなステータスウィジェットも削除 */
+    div[data-testid="stStatusWidget"] {
+        display: none !important;
     }
     </style>
     """, unsafe_allow_html=True)
