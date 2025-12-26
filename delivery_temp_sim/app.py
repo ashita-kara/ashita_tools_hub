@@ -29,7 +29,7 @@ st.markdown("""
         font-weight: bold;
         color: #31333F;
     }
-    /* ダークモード対応の文字色調整 */
+    /* ダークモード対応 */
     @media (prefers-color-scheme: dark) {
         .custom-title {
             color: #FAFAFA !important;
@@ -45,23 +45,21 @@ def calc_perceived_temp(t, h, v_kmh, shield_rate, rad_bonus):
     tn = 37 - (37 - t) / (0.68 - 0.0014 * h + 1/a) - 0.29 * t * (1 - h/100)
     return tn + rad_bonus
 
-# ★更新確認用にタイトルを変更しています★
-st.markdown('<div class="custom-title">🛵 配達員向け 体感温度予報 v2.0</div>', unsafe_allow_html=True)
+# ★タイトルをv2.1に変更して更新を目視確認★
+st.markdown('<div class="custom-title">🛵 配達員向け 体感温度予報 v2.1</div>', unsafe_allow_html=True)
 
 # --- サイドバー ---
 st.sidebar.header("🔧 条件設定")
 
-# 3. デフォルトを東京にする処理
+# 3. デフォルト東京 (keyを変更して強制リセット)
 city_list = list(CITIES.keys())
-# セッションステートを使って強制的に初期値をセットする
-if 'city_initialized' not in st.session_state:
-    st.session_state['default_city_index'] = city_list.index("東京")
-    st.session_state['city_initialized'] = True
+default_index = city_list.index("東京") if "東京" in city_list else 0
 
 selected_city = st.sidebar.selectbox(
     "都市を選択", 
     city_list, 
-    index=st.session_state.get('default_city_index', 0)
+    index=default_index,
+    key="city_select_v2" # ★重要: keyを変えることでブラウザの記憶(札幌)を強制破棄
 )
 
 speed = st.sidebar.slider("走行速度 (km/h)", 0, 80, 40)
@@ -70,7 +68,8 @@ shield = int(bike_type.split("(")[1].split("%")[0]) if bike_type != "カスタ�
 is_sunny_mode = st.sidebar.checkbox("日向（直射日光）を考慮する", value=True)
 
 # --- データ取得 ---
-@st.cache_data(ttl=600)
+# キャッシュを一時的に無効化して最新データを強制取得
+@st.cache_data(ttl=0)
 def fetch_weather(city_name):
     lat, lon = CITIES[city_name]["lat"], CITIES[city_name]["lon"]
     url = f"http://api.openweathermap.org/data/2.5/forecast?lat={lat}&lon={lon}&appid={API_KEY}&units=metric&lang=ja"
@@ -101,7 +100,7 @@ if data.get("list"):
         rad_bonus = (monthly_rad.get(dt.month, 2) if is_sunny_mode else 0) if 7 <= dt.hour <= 17 else 0
         p_temp = calc_perceived_temp(t, h, speed + (w_speed * 3.6), shield, rad_bonus)
         
-        # 2. 夜間判定（18時〜翌6時）
+        # 夜間判定フラグ
         is_night = (dt.hour >= 18) or (dt.hour < 6)
         
         rows.append({
@@ -126,25 +125,25 @@ if data.get("list"):
     # 下段：雨
     fig.add_trace(go.Bar(x=df["日時"], y=df["雨"], name="雨(mm)", marker_color='royalblue'), row=2, col=1)
 
-    # 1. 風速7m超え判定（視認性向上のため色は赤、サイズ拡大）
-    wind_colors = ['#FF0000' if w > 7 else 'gray' for w in df["風速"]] # 赤色を明示
-    wind_sizes = [10 if w > 7 else 6 for w in df["風速"]] # マーカーサイズ
+    # 1. 風速7m超え判定（赤色・サイズ大）
+    wind_colors = ['#FF0000' if w > 7 else 'gray' for w in df["風速"]]
+    wind_sizes = [10 if w > 7 else 6 for w in df["風速"]]
     
     fig.add_trace(go.Scatter(
         x=df["日時"], 
         y=df["風速"], 
         name="風(m/s)", 
-        mode='lines+markers', # 線とマーカー両方を表示
+        mode='lines+markers',
         line=dict(color='gray', width=1),
-        marker=dict(color=wind_colors, size=wind_sizes, line=dict(width=1, color='white')), # 枠線をつけて目立たせる
+        marker=dict(color=wind_colors, size=wind_sizes, line=dict(width=1, color='white')),
     ), row=2, col=1)
 
-    # 2. 夜間帯の背景色付け（ダークモードでも見えるように調整）
+    # 2. 夜間帯の背景色付け（ダークモード対応）
     for i, row in df.iterrows():
         if row['is_night']:
             fig.add_vrect(
                 x0=i-0.5, x1=i+0.5,
-                fillcolor="#4B0082", opacity=0.2, # インディゴブルーで夜を表現
+                fillcolor="#4B0082", opacity=0.25, # 少し濃くしました
                 layer="below", line_width=0,
                 row="all", col=1
             )
@@ -155,7 +154,7 @@ if data.get("list"):
         hovermode="x unified",
         margin=dict(l=10, r=10, t=30, b=10),
         legend=dict(orientation="h", yanchor="top", y=-0.2, xanchor="center", x=0.5),
-        template="plotly_dark" # ダークモードをベースにする（スマホ設定に合わせるため）
+        template="plotly_dark"
     )
 
     fig.update_xaxes(showticklabels=True, tickangle=-45, fixedrange=True, tickfont=dict(size=9))
