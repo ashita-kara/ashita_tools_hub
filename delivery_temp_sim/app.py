@@ -14,7 +14,6 @@ CITIES = {
     "福岡": {"lat": 33.5904, "lon": 130.4017}, "沖縄": {"lat": 26.2124, "lon": 127.6809},
 }
 
-# 日本時間(JST)
 JST = timezone(timedelta(hours=9))
 
 # --- CSS: レイアウト調整 ---
@@ -30,6 +29,12 @@ st.markdown("""
         font-weight: bold;
         color: #31333F;
     }
+    /* ダークモード対応の文字色調整 */
+    @media (prefers-color-scheme: dark) {
+        .custom-title {
+            color: #FAFAFA !important;
+        }
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -40,15 +45,24 @@ def calc_perceived_temp(t, h, v_kmh, shield_rate, rad_bonus):
     tn = 37 - (37 - t) / (0.68 - 0.0014 * h + 1/a) - 0.29 * t * (1 - h/100)
     return tn + rad_bonus
 
-st.markdown('<div class="custom-title">🛵 配達員向け 体感温度予報</div>', unsafe_allow_html=True)
+# ★更新確認用にタイトルを変更しています★
+st.markdown('<div class="custom-title">🛵 配達員向け 体感温度予報 v2.0</div>', unsafe_allow_html=True)
 
 # --- サイドバー ---
 st.sidebar.header("🔧 条件設定")
 
 # 3. デフォルトを東京にする処理
 city_list = list(CITIES.keys())
-default_index = city_list.index("東京") if "東京" in city_list else 0
-selected_city = st.sidebar.selectbox("都市を選択", city_list, index=default_index)
+# セッションステートを使って強制的に初期値をセットする
+if 'city_initialized' not in st.session_state:
+    st.session_state['default_city_index'] = city_list.index("東京")
+    st.session_state['city_initialized'] = True
+
+selected_city = st.sidebar.selectbox(
+    "都市を選択", 
+    city_list, 
+    index=st.session_state.get('default_city_index', 0)
+)
 
 speed = st.sidebar.slider("走行速度 (km/h)", 0, 80, 40)
 bike_type = st.sidebar.radio("バイクのタイプ", ["ネイキッド (0%)", "小型スクリーン (30%)", "中型スクリーン (60%)", "屋根付き・大型 (90%)", "カスタム設定"])
@@ -72,10 +86,8 @@ if data.get("list"):
     now_jst = datetime.now(JST)
     now_ts = now_jst.timestamp()
 
-    # 日本時間の現在時刻から先の予報のみ抽出
     filtered_list = [item for item in data["list"] if item["dt"] > now_ts - 5400]
 
-    # スマホで見やすい24時間分（8個）に限定
     for item in filtered_list[:8]:
         dt = datetime.fromtimestamp(item["dt"], JST)
         t = item["main"]["temp"]
@@ -89,7 +101,7 @@ if data.get("list"):
         rad_bonus = (monthly_rad.get(dt.month, 2) if is_sunny_mode else 0) if 7 <= dt.hour <= 17 else 0
         p_temp = calc_perceived_temp(t, h, speed + (w_speed * 3.6), shield, rad_bonus)
         
-        # 2. 夜間判定（18時〜翌6時）用のフラグ
+        # 2. 夜間判定（18時〜翌6時）
         is_night = (dt.hour >= 18) or (dt.hour < 6)
         
         rows.append({
@@ -98,7 +110,7 @@ if data.get("list"):
             "体感温度": round(p_temp, 1), 
             "風速": w_speed, 
             "雨": round(rain, 2),
-            "is_night": is_night # 夜間フラグを追加
+            "is_night": is_night
         })
 
     df = pd.DataFrame(rows)
@@ -107,37 +119,34 @@ if data.get("list"):
     fig = make_subplots(rows=2, cols=1, shared_xaxes=False, vertical_spacing=0.2, 
                         subplot_titles=("温度推移 (℃)", "天候詳細 (雨・風)"))
 
-    # 上段：温度グラフ
+    # 上段：温度
     fig.add_trace(go.Scatter(x=df["日時"], y=df["気温"], name="予報気温", line=dict(color='orange', dash='dot')), row=1, col=1)
     fig.add_trace(go.Scatter(x=df["日時"], y=df["体感温度"], name="体感温度", line=dict(color='cyan', width=4)), row=1, col=1)
     
-    # 下段：雨グラフ
+    # 下段：雨
     fig.add_trace(go.Bar(x=df["日時"], y=df["雨"], name="雨(mm)", marker_color='royalblue'), row=2, col=1)
 
-    # 1. 風速7m超えを赤色にする処理
-    # 基本の線はグレー
-    wind_colors = ['red' if w > 7 else 'gray' for w in df["風速"]]
-    wind_sizes = [8 if w > 7 else 5 for w in df["風速"]] # 7m超えは点も大きく
+    # 1. 風速7m超え判定（視認性向上のため色は赤、サイズ拡大）
+    wind_colors = ['#FF0000' if w > 7 else 'gray' for w in df["風速"]] # 赤色を明示
+    wind_sizes = [10 if w > 7 else 6 for w in df["風速"]] # マーカーサイズ
     
-    # 風速グラフ（線＋マーカー）
     fig.add_trace(go.Scatter(
         x=df["日時"], 
         y=df["風速"], 
         name="風(m/s)", 
-        mode='lines+markers',
-        line=dict(color='gray', width=1), # 線は基本グレーでつなぐ
-        marker=dict(color=wind_colors, size=wind_sizes), # 点の色とサイズを条件で変える
+        mode='lines+markers', # 線とマーカー両方を表示
+        line=dict(color='gray', width=1),
+        marker=dict(color=wind_colors, size=wind_sizes, line=dict(width=1, color='white')), # 枠線をつけて目立たせる
     ), row=2, col=1)
 
-    # 2. 夜間帯（18:00~06:00）の背景色付け
+    # 2. 夜間帯の背景色付け（ダークモードでも見えるように調整）
     for i, row in df.iterrows():
         if row['is_night']:
-            # 上段と下段の両方に縦帯（vrect）を追加
             fig.add_vrect(
-                x0=i-0.5, x1=i+0.5, # 棒グラフの幅に合わせて帯を敷く
-                fillcolor="gray", opacity=0.1, # 薄い灰色
+                x0=i-0.5, x1=i+0.5,
+                fillcolor="#4B0082", opacity=0.2, # インディゴブルーで夜を表現
                 layer="below", line_width=0,
-                row="all", col=1 # 全段に適用
+                row="all", col=1
             )
 
     fig.update_layout(
@@ -146,7 +155,7 @@ if data.get("list"):
         hovermode="x unified",
         margin=dict(l=10, r=10, t=30, b=10),
         legend=dict(orientation="h", yanchor="top", y=-0.2, xanchor="center", x=0.5),
-        template="plotly_white"
+        template="plotly_dark" # ダークモードをベースにする（スマホ設定に合わせるため）
     )
 
     fig.update_xaxes(showticklabels=True, tickangle=-45, fixedrange=True, tickfont=dict(size=9))
@@ -157,7 +166,6 @@ if data.get("list"):
     # --- 直近のアドバイス ---
     st.subheader("💡 直近のアドバイス")
     for i in range(min(len(df), 3)):
-        # 風が強い時はアドバイスにもアイコン追加
         wind_alert = " 🚩強風注意" if df['風速'].iloc[i] > 7 else ""
         st.write(f"**{df['日時'].iloc[i]}**: 体感 **{df['体感温度'].iloc[i]} ℃**{wind_alert}")
         st.divider()
